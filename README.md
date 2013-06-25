@@ -1,6 +1,6 @@
 #Chamaleon HTML5 Game
 
-This is a basic HTML5 Game using The kinectjs library.
+This is a basic HTML5 Game using The kineticjs library.
 
 
 ## Dependencies
@@ -9,9 +9,10 @@ This is a basic HTML5 Game using The kinectjs library.
 * grunt
 
 ## Test it
-´´´
+
+```
 npm install & bower install
 npm server
-´´´
+```
 
 
