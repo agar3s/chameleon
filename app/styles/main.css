@@ -1,8 +1,11 @@
 body {
-    background: #fafafa;
+    background-color: white;
 }
 
 .hero-unit {
     margin: 50px auto 0 auto;
     width: 300px;
+}
+canvas {
+  -webkit-filter: blur(2px);
 }
