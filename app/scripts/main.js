@@ -1,47 +1,35 @@
+//main container for the game
 var stage = new Kinetic.Stage({
   id: 'main',
   container: 'container',
-  width: 800,
-  height: 600,
+  width: 500,
+  height: 500,
 });
 
+//layer1
 var layer = new Kinetic.Layer({
   id:'layer1'
 });
 
-var layer2 = new Kinetic.Layer({
-  id:'layer2'
-});
+//Map Class
+var Map = function(width, height, tiles){
+  this.width = width;
+  this.height = height;
+  this.tiles = tiles;
+  this.rects = [];
+};
 
-// add the shape to the layer
+var blockSize=60;
 
-var blockSize=60,
-    map1= {
-      width:5,
-      height:3,
-      tiles:'10101'+
-            '00100'+
-            '10101',
-      rects:[],
-      visible: false
-    },
-    map2= {
-      width:5,
-      height:3,
-      tiles:'11111'+
-            '10001'+
-            '11111',
-      rects:[],
-      visible: false
-    }
-
-var rect = new Kinetic.Rect({
+//main Character
+var chameleonBoy = new Kinetic.Rect({
   x: 0,
   y: 70,
   width: blockSize/2,
   height: blockSize/2,
-  fill: 'rgb(100, 255, 255)',
+  fill: 'rgb(170, 170, 50)',
 });
+
 var life = new Kinetic.Rect({
   x: 0,
   y: 300,
@@ -49,7 +37,11 @@ var life = new Kinetic.Rect({
   height: blockSize/2,
   fill: 'rgb(255, 20, 0)',
 });
-var loadMap = function(layer, map){
+
+var maps = [];
+
+//dinamic function to create maps
+var buildMap = function(layer, map){
   for(var i = 0; i<map.height*map.width; i+=map.width){
     for(var j = 0; j<map.width; j++){
       if(map.tiles[i+j]==1){
@@ -58,7 +50,7 @@ var loadMap = function(layer, map){
           y: i*blockSize/map.width,
           width: blockSize,
           height: blockSize,
-          fill: 'rgb(200,200,180)'
+          fill: 'rgb(0,60,180)'
         });
         map.rects.push(block);
         layer.add(block);
@@ -66,20 +58,36 @@ var loadMap = function(layer, map){
     }
   }
 };
-loadMap(layer, map1);
-loadMap(layer, map2);
-map1.visible = false;
-map2.visible = true;
+
+
+
+function loadMap(data){
+  layer.destroyChildren();
+  maps = [];
+  for (var i = data.tiles.length - 1; i >= 0; i--) {
+    var mapInstance = new Map(data.width, data.height, data.tiles[i]);
+    maps.push(mapInstance);
+    buildMap(layer, mapInstance);
+  };
+  layer.add(chameleonBoy);
+  layer.add(log);
+  layer.add(life);
+  chameleonBoy.setPosition(0, blockSize);
+  chameleonBoy.i = 1;
+  chameleonBoy.j = 0;
+  chameleonBoy.vulnerable = false;
+  life.setWidth(300);
+}
+
+
 var log = new Kinetic.Text({
-    text:'ola ke ase',
-    x: 100,
-    y: 200,
-    stroke: 'rgb(100,100,200)'
+  text:'ola ke ase',
+  x: 100,
+  y: 200,
+  stroke: 'rgb(100,100,200)'
 });
 // add the layer to the stage
-layer.add(rect);
-layer.add(log);
-layer.add(life);
+
 stage.add(layer);
 
 gKeys.init();
@@ -89,101 +97,80 @@ context.globalCompositeOperation = "lighter";
 
 myKeys = gKeys.keys;
 
+var mapActiveIndex = 0;
 var isCollision = function(){
-  if(map1.visible){
-    return map1.tiles[rect.i*map1.width+rect.j]==1;
-  }else{
-    return map2.tiles[rect.i*map2.width+rect.j]==1;
-  }
+  return maps[mapActiveIndex].tiles[chameleonBoy.i*maps[mapActiveIndex].width+chameleonBoy.j]==1;
 };
-
-var toogleLayer = function(){
-  if(map1.visible){
-    for (var i = map1.rects.length - 1; i >= 0; i--) {
-      map1.rects[i].hide();
-    };
-    for (var i = map2.rects.length - 1; i >= 0; i--) {
-      map2.rects[i].show();
-    };
-    map1.visible = false;
-    map2.visible = false;
-  } else {
-    for (var i = map2.rects.length - 1; i >= 0; i--) {
-      map2.rects[i].hide();
-    };
-    for (var i = map1.rects.length - 1; i >= 0; i--) {
-      map1.rects[i].show();
-    };
-    map2.visible = false;
-    map1.visible = true;
-  }
-  rect.vulnerable = isCollision();
+var toogleLayer = function(mapIndex){
+  for (var i = maps[mapActiveIndex].rects.length - 1; i >= 0; i--) {
+    maps[mapActiveIndex].rects[i].hide();
+  };
+  for (var i = maps[mapIndex].rects.length - 1; i >= 0; i--) {
+    maps[mapIndex].rects[i].show();
+  };
+  mapActiveIndex = mapIndex;
+  chameleonBoy.vulnerable = isCollision();
 }
-toogleLayer();
+
 gKeys.keyDown(function(keys){
   if(myKeys.SPACE.down){
-    toogleLayer();
+    toogleLayer(mapActiveIndex^1);
   }
 });
 
-
-rect.i = 1;
-rect.j = 0;
-rect.vulnerable = false;
-
 var anim = new Kinetic.Animation(function(frame) {
   var time = frame.time,
-      timeDiff = frame.timeDiff,
-      frameRate = frame.frameRate;
-  var x = rect.getAttr('x'),
-      y = rect.getAttr('y');
+  timeDiff = frame.timeDiff,
+  frameRate = frame.frameRate;
+  var x = chameleonBoy.getAttr('x'),
+  y = chameleonBoy.getAttr('y');
 
   if(myKeys.LEFT.down){
     x -=2;
-    if(x/blockSize<rect.j){
-      rect.j--;
-      if(rect.j<0 || isCollision()){
+    if(x/blockSize<chameleonBoy.j){
+      chameleonBoy.j--;
+      if(chameleonBoy.j<0 || isCollision()){
         x+=2;
-        rect.j++;
+        chameleonBoy.j++;
       }else{
-        log.setText('row: '+rect.i+' col: '+rect.j);
+        log.setText('row: '+chameleonBoy.i+' col: '+chameleonBoy.j);
       }
     }
   }else if(myKeys.RIGHT.down){
     x +=2;
-    if(x/blockSize-1/2>rect.j){
-      rect.j++;
-      if(rect.j>=map1.width || isCollision()){
+    if(x/blockSize-1/2>chameleonBoy.j){
+      chameleonBoy.j++;
+      if(chameleonBoy.j>=maps[0].width || isCollision()){
         x-=2;
-        rect.j--;
+        chameleonBoy.j--;
       }else{
-        log.setText('row: '+rect.i+' col: '+rect.j);
+        log.setText('row: '+chameleonBoy.i+' col: '+chameleonBoy.j);
       }
     }
   }else if(myKeys.UP.down){
     y-=2;
-    if(y/blockSize<rect.i){
-      rect.i--;
-      if(rect.i<0||isCollision()){
+    if(y/blockSize<chameleonBoy.i){
+      chameleonBoy.i--;
+      if(chameleonBoy.i<0||isCollision()){
         y+=2;
-        rect.i++;
+        chameleonBoy.i++;
       }else{
-        log.setText('row: '+rect.i+' col: '+rect.j);
+        log.setText('row: '+chameleonBoy.i+' col: '+chameleonBoy.j);
       }
     }
   }else if(myKeys.DOWN.down){
     y+=2;
-    if(y/blockSize-1/2>rect.i){
-      rect.i++;
-      if(rect.i>=map1.height||isCollision()){
+    if(y/blockSize-1/2>chameleonBoy.i){
+      chameleonBoy.i++;
+      if(chameleonBoy.i>=maps[0].height||isCollision()){
         y-=2;
-        rect.i--;
+        chameleonBoy.i--;
       }else{
-        log.setText('row: '+rect.i+' col: '+rect.j);
+        log.setText('row: '+chameleonBoy.i+' col: '+chameleonBoy.j);
       }
     }
   }
-  if(rect.vulnerable){
+  if(chameleonBoy.vulnerable){
     if(isCollision()){
       life.setWidth(life.getWidth()-5);
       if(life.getWidth()<=0){
@@ -191,12 +178,41 @@ var anim = new Kinetic.Animation(function(frame) {
         anim.stop();
       }
     }else{
-      rect.vulnerable=false;
+      chameleonBoy.vulnerable=false;
     }
   }
-  rect.setAttr('x', x);
-  rect.setAttr('y', y);
-  // update stuff
+  chameleonBoy.setPosition(x, y);
 }, layer);
 
-anim.start();
+function loadDatos(mapUrl) {   
+  var xobj = new XMLHttpRequest();
+  xobj.overrideMimeType("application/json");
+  xobj.open('GET', mapUrl, true);
+  anim.stop();
+  xobj.onreadystatechange = function () {
+    if (xobj.readyState == 4) {
+      var data = xobj.responseText;
+      data = JSON.parse(data);
+      loadMap(data);
+      mapActiveIndex=0;
+      toogleLayer(1);
+      anim.start();
+    }
+  }
+  xobj.send(null);
+};
+loadDatos('maps/map1.json');
+
+
+
+var anchors = document.getElementsByTagName('a');
+var loadMapByClick = function(e){
+  loadDatos(e.currentTarget.dataset.map);
+  e.preventDefault();
+  canvas = document.getElementsByTagName('canvas')[0];
+  canvas.focus();
+  return false;
+};
+for(var i = 0; i<anchors.length; i++){
+  anchors[i].addEventListener('click', loadMapByClick , false);
+}
