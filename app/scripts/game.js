@@ -1,6 +1,7 @@
-var map;
-var blockSize = 60;
-var zoneActiveIndex = 0;
+var map,
+    blockSize = 60,
+    zoneActiveIndex = 0,
+    speed = 2;
 
 //main container for the game
 var stage = new Kinetic.Stage({
@@ -27,16 +28,17 @@ var Map = function(width, height){
 
 var Zone = function(zone){
   this.tiles = zone.tiles;
+  this.color = zone.color;
   this.rects = [];
 };
 
 //main Character
-var chameleonBoy = new Kinetic.Rect({
-  x: 0,
+var chameleonBoy = new Kinetic.Circle({
+  x: 70,
   y: 70,
   width: blockSize/2,
   height: blockSize/2,
-  fill: 'rgb(170, 170, 50)',
+  fill: '#69F4BD',
 });
 
 var life = new Kinetic.Rect({
@@ -47,6 +49,8 @@ var life = new Kinetic.Rect({
   fill: 'rgb(255, 20, 0)',
 });
 
+stage.add(mapLayer);
+stage.add(characterLayer);
 
 //dinamic function to create maps
 var buildZone = function(mapLayer, width, height, zone){
@@ -59,7 +63,7 @@ var buildZone = function(mapLayer, width, height, zone){
           y: i*blockSize/width,
           width: blockSize,
           height: blockSize,
-          fill: 'rgb(0,60,180)',
+          fill: zone.color,
           visible: false
         });
         zone.rects.push(block);
@@ -69,21 +73,22 @@ var buildZone = function(mapLayer, width, height, zone){
   }
 };
 
-
-
 function loadMap(data){
   map = data;
   mapLayer.destroyChildren();
+  characterLayer.destroyChildren();
+
   for (var i = data.zones.length - 1; i >= 0; i--) {
     buildZone(mapLayer, map.width, map.height, map.zones[i]);
   };
   characterLayer.add(chameleonBoy);
   characterLayer.add(life);
-  chameleonBoy.setPosition(0, blockSize);
+  chameleonBoy.setPosition(data.j*blockSize + blockSize/2, data.i*blockSize + blockSize/2);
   chameleonBoy.i = 1;
   chameleonBoy.j = 0;
   chameleonBoy.vulnerable = false;
   life.setWidth(300);
+
 };
 
 var isCollision = function(){
@@ -113,9 +118,7 @@ var toogleLayer = function(zoneIndex){
       map.zones[zoneActiveIndex].rects[i].hide();
     };
     mapLayer.draw();
-    color = Kinetic.Util.getRandomColor();
     for (var i = map.zones[zoneIndex].rects.length - 1; i >= 0; i--) {
-      map.zones[zoneIndex].rects[i].setFill(color);
       map.zones[zoneIndex].rects[i].show();
     };
     tween.reverse();
@@ -124,7 +127,7 @@ var toogleLayer = function(zoneIndex){
   }, 100);
 };
 
-var checkCollision = function(x, y){
+var checkCollision = function(){
   if(chameleonBoy.vulnerable){
     if(isCollision()){
       life.setWidth(life.getWidth()-5);
@@ -135,64 +138,35 @@ var checkCollision = function(x, y){
       chameleonBoy.vulnerable=false;
     }
   }
-  chameleonBoy.setPosition(x, y);
 };
 
-var moveLeft = function(){
+var move = function(xDir, yDir){
   var x = chameleonBoy.getAttr('x'),
   y = chameleonBoy.getAttr('y');
-  x -=2;
-  if(x/blockSize<chameleonBoy.j){
+
+  x+=xDir*speed;
+  y+=yDir*speed;
+
+  if(xDir==-1 && x/blockSize-1/4<chameleonBoy.j){
     chameleonBoy.j--;
-    if(chameleonBoy.j<0 || isCollision()){
-      x+=2;
-      chameleonBoy.j++;
-    }
   }
-  checkCollision(x, y);
-};
-
-var moveRight = function(){
-  var x = chameleonBoy.getAttr('x'),
-  y = chameleonBoy.getAttr('y');
-  x +=2;
-  if(x/blockSize-1/2>chameleonBoy.j){
+  if(xDir==1 && x/blockSize-3/4>chameleonBoy.j){
     chameleonBoy.j++;
-    if(chameleonBoy.j>=map.width || isCollision()){
-      x-=2;
-      chameleonBoy.j--;
-    }
   }
-  checkCollision(x, y);
-};
-var moveUp = function(){
-  var x = chameleonBoy.getAttr('x'),
-  y = chameleonBoy.getAttr('y');
-  y-=2;
-  if(y/blockSize<chameleonBoy.i){
+  if(yDir==-1 && y/blockSize-1/4<chameleonBoy.i){
     chameleonBoy.i--;
-    if(chameleonBoy.i<0||isCollision()){
-      y+=2;
-      chameleonBoy.i++;
-    }
   }
-  checkCollision(x, y);
-};
-
-var moveDown = function(){
-  var x = chameleonBoy.getAttr('x'),
-  y = chameleonBoy.getAttr('y');
-  y+=2;
-  if(y/blockSize-1/2>chameleonBoy.i){
+  if(yDir==1 && y/blockSize-3/4>chameleonBoy.i){
     chameleonBoy.i++;
-    if(chameleonBoy.i>=map.height||isCollision()){
-      y-=2;
-      chameleonBoy.i--;
-    }
   }
-  checkCollision(x, y);
+  if(isCollision() || chameleonBoy.j<0 || chameleonBoy.j>=map.width ||
+    chameleonBoy.i>=map.height || chameleonBoy.i<0){
+    x+=xDir*-1*speed;
+    y+=yDir*-1*speed;
+    chameleonBoy.j+=xDir*-1;
+    chameleonBoy.i+=yDir*-1;
+  }
+  chameleonBoy.setPosition(x, y);
+  checkCollision();
 };
 
-
-stage.add(mapLayer);
-stage.add(characterLayer);

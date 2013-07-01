@@ -14,15 +14,8 @@ var anim = new Kinetic.Animation(function(frame) {
   timeDiff = frame.timeDiff,
   frameRate = frame.frameRate;
 
-  if(myKeys.LEFT.down){
-    moveLeft();
-  }else if(myKeys.RIGHT.down){
-    moveRight();
-  }else if(myKeys.UP.down){
-    moveUp();
-  }else if(myKeys.DOWN.down){
-    moveDown();
-  }
+  move(myKeys.LEFT.down?-1:myKeys.RIGHT.down?1:0,
+       myKeys.UP.down?-1:myKeys.DOWN.down?1:0);
 }, characterLayer);
 
 function loadDatos(mapUrl) {   
@@ -37,6 +30,7 @@ function loadDatos(mapUrl) {
       loadMap(data);
       initZone(0);
       anim.start();
+      document.getElementById('audiotag1').play();
     }
   }
   xobj.send(null);
