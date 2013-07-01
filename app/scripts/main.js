@@ -6,9 +6,12 @@ var stage = new Kinetic.Stage({
   height: 500,
 });
 
-//layer1
-var layer = new Kinetic.Layer({
-  id:'layer1'
+//theMap
+var mapLayer = new Kinetic.Layer({
+  id:'map'
+});
+var characterLayer = new Kinetic.Layer({
+  id:'character'
 });
 
 //Map Class
@@ -23,7 +26,9 @@ var Zone = function(zone){
   this.rects = [];
 };
 
+var map;
 var blockSize=60;
+var zoneActiveIndex = 0;
 
 //main Character
 var chameleonBoy = new Kinetic.Rect({
@@ -42,10 +47,9 @@ var life = new Kinetic.Rect({
   fill: 'rgb(255, 20, 0)',
 });
 
-var map;
 
 //dinamic function to create maps
-var buildZone = function(layer, width, height, zone){
+var buildZone = function(mapLayer, width, height, zone){
   zone.rects = [];
   for(var i = 0; i<height*width; i+=width){
     for(var j = 0; j<width; j++){
@@ -59,7 +63,7 @@ var buildZone = function(layer, width, height, zone){
           visible: false
         });
         zone.rects.push(block);
-        layer.add(block);
+        mapLayer.add(block);
       }
     }
   }
@@ -69,13 +73,13 @@ var buildZone = function(layer, width, height, zone){
 
 function loadMap(data){
   map = data;
-  layer.destroyChildren();
+  mapLayer.destroyChildren();
   for (var i = data.zones.length - 1; i >= 0; i--) {
-    buildZone(layer, map.width, map.height, map.zones[i]);
+    buildZone(mapLayer, map.width, map.height, map.zones[i]);
   };
-  layer.add(chameleonBoy);
-  layer.add(log);
-  layer.add(life);
+  characterLayer.add(chameleonBoy);
+  characterLayer.add(life);
+  mapLayer.add(log);
   chameleonBoy.setPosition(0, blockSize);
   chameleonBoy.i = 1;
   chameleonBoy.j = 0;
@@ -90,18 +94,19 @@ var log = new Kinetic.Text({
   y: 200,
   stroke: 'rgb(100,100,200)'
 });
-// add the layer to the stage
+// add the mapLayer to the stage
 
-stage.add(layer);
-
+stage.add(mapLayer);
+stage.add(characterLayer);
 gKeys.init();
 
 context = document.getElementsByTagName('canvas')[0].getContext('2d');
 context.globalCompositeOperation = "lighter";
+context = document.getElementsByTagName('canvas')[1].getContext('2d');
+context.globalCompositeOperation = "lighter";
 
 myKeys = gKeys.keys;
 
-var zoneActiveIndex = 0;
 var isCollision = function(){
   return map.zones[zoneActiveIndex].tiles[chameleonBoy.i*map.width+chameleonBoy.j]==1;
 };
@@ -110,16 +115,32 @@ var initZone = function(zoneIndex){
   for (var i = map.zones[zoneIndex].rects.length - 1; i >= 0; i--) {
     map.zones[zoneIndex].rects[i].show();
   };
+  mapLayer.draw();
 }
 var toogleLayer = function(zoneIndex){
-  for (var i = map.zones[zoneActiveIndex].rects.length - 1; i >= 0; i--) {
-    map.zones[zoneActiveIndex].rects[i].hide();
-  };
-  for (var i = map.zones[zoneIndex].rects.length - 1; i >= 0; i--) {
-    map.zones[zoneIndex].rects[i].show();
-  };
-  zoneActiveIndex = zoneIndex;
-  chameleonBoy.vulnerable = isCollision();
+
+  var tween = new Kinetic.Tween({
+    node: mapLayer,
+    duration: 0.1,
+    opacity: 0,
+    easing: Kinetic.Easings.EaseOut,
+  });
+
+  tween.play();
+  setTimeout(function(){
+    for (var i = map.zones[zoneActiveIndex].rects.length - 1; i >= 0; i--) {
+      map.zones[zoneActiveIndex].rects[i].hide();
+    };
+    mapLayer.draw();
+    color = Kinetic.Util.getRandomColor();
+    for (var i = map.zones[zoneIndex].rects.length - 1; i >= 0; i--) {
+      map.zones[zoneIndex].rects[i].setFill(color);
+      map.zones[zoneIndex].rects[i].show();
+    };
+    tween.reverse();
+    zoneActiveIndex = zoneIndex;
+    chameleonBoy.vulnerable = isCollision();
+  }, 100);
 }
 
 gKeys.keyDown(function(keys){
@@ -184,7 +205,7 @@ var anim = new Kinetic.Animation(function(frame) {
     }
   }
   chameleonBoy.setPosition(x, y);
-}, layer);
+}, characterLayer);
 
 function loadDatos(mapUrl) {   
   var xobj = new XMLHttpRequest();
