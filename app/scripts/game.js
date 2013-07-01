@@ -1,7 +1,8 @@
 var map,
     blockSize = 60,
     zoneActiveIndex = 0,
-    speed = 2;
+    speed = 2,
+    sequenceIndex = 0;
 
 //main container for the game
 var stage = new Kinetic.Stage({
@@ -49,6 +50,12 @@ var life = new Kinetic.Rect({
   fill: 'rgb(255, 20, 0)',
 });
 
+var fly = new Kinetic.Rect({
+  width: blockSize/5,
+  height: blockSize/5,
+  fill: "#FFFFFF"
+});
+
 stage.add(mapLayer);
 stage.add(characterLayer);
 
@@ -75,6 +82,7 @@ var buildZone = function(mapLayer, width, height, zone){
 
 function loadMap(data){
   map = data;
+  map.won = false;
   mapLayer.destroyChildren();
   characterLayer.destroyChildren();
 
@@ -89,22 +97,37 @@ function loadMap(data){
   chameleonBoy.vulnerable = false;
   life.setWidth(300);
 
+  fly.setPosition(data.gj*blockSize + blockSize/5, data.gi*blockSize + blockSize/5);
+  fly.show();
+  characterLayer.add(fly);
+
 };
 
 var isCollision = function(){
   return map.zones[zoneActiveIndex].tiles[chameleonBoy.i*map.width+chameleonBoy.j]==1;
 };
 
-var initZone = function(zoneIndex){
-  var zoneActiveIndex = zoneIndex;
-  for (var i = map.zones[zoneIndex].rects.length - 1; i >= 0; i--) {
-    map.zones[zoneIndex].rects[i].show();
+var initZone = function(){
+  var zoneActiveIndex = map.sequence[0];
+  sequenceIndex = 0;
+  for (var i = map.zones[zoneActiveIndex].rects.length - 1; i >= 0; i--) {
+    map.zones[zoneActiveIndex].rects[i].show();
   };
   mapLayer.draw();
 }
 
-var toogleLayer = function(zoneIndex){
 
+var toogleLayer = function(zoneIndex){
+  if(zoneIndex==undefined){
+    sequenceIndex++;
+    if(sequenceIndex>=map.sequence.length){
+      sequenceIndex=0;
+    }
+    zoneIndex = map.sequence[sequenceIndex];
+  }
+  if(zoneIndex==zoneActiveIndex){
+    return;
+  }
   var tween = new Kinetic.Tween({
     node: mapLayer,
     duration: 0.1,
@@ -140,6 +163,20 @@ var checkCollision = function(){
   }
 };
 
+var checkFly = function(){
+  var x = chameleonBoy.getAttr('x'),
+      y = chameleonBoy.getAttr('y'),
+      fx = fly.getAttr('x')+blockSize/10,
+      fy = fly.getAttr('y')+blockSize/10;
+
+  if(x-blockSize/4<fx&&x+blockSize/4>fx&&
+    y-blockSize/4<fy&&y+blockSize/4>fy){
+    fly.hide();
+    console.log("Congratulations!");
+    map.won=true;
+  }
+};
+
 var move = function(xDir, yDir){
   var x = chameleonBoy.getAttr('x'),
   y = chameleonBoy.getAttr('y');
@@ -168,5 +205,11 @@ var move = function(xDir, yDir){
   }
   chameleonBoy.setPosition(x, y);
   checkCollision();
+  checkFly();
 };
 
+var moveFly = function(){
+  var x = fly.getAttr('x');
+  var y = fly.getAttr('y');
+  fly.setPosition(x-0.5+Math.random(), y-0.5+Math.random());
+};

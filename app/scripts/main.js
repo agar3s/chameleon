@@ -1,21 +1,34 @@
+var maps = ['maps/map1.json', 'maps/map2.json', 'maps/map3.json'];
+activeLevel = 0;
 
 gKeys.init();
-
 myKeys = gKeys.keys;
 
 gKeys.keyDown(function(keys){
   if(myKeys.SPACE.down){
-    toogleLayer(zoneActiveIndex^1);
+    toogleLayer();
   }
+});
+
+gKeys.registerMove(['RIGHT', 'RIGHT', 'RIGHT'], function(){
+  toogleLayer(0);
 });
 
 var anim = new Kinetic.Animation(function(frame) {
   var time = frame.time,
   timeDiff = frame.timeDiff,
   frameRate = frame.frameRate;
-
   move(myKeys.LEFT.down?-1:myKeys.RIGHT.down?1:0,
        myKeys.UP.down?-1:myKeys.DOWN.down?1:0);
+  moveFly();
+
+  if(map.won){
+    activeLevel++;
+    if(activeLevel>=maps.length){
+      activeLevel=0;
+    }
+    loadDatos(maps[activeLevel]);
+  }
 }, characterLayer);
 
 function loadDatos(mapUrl) {   
@@ -28,14 +41,14 @@ function loadDatos(mapUrl) {
       var data = xobj.responseText;
       data = JSON.parse(data);
       loadMap(data);
-      initZone(0);
+      initZone();
       anim.start();
       document.getElementById('audiotag1').play();
     }
   }
   xobj.send(null);
 };
-loadDatos('maps/map1.json');
+loadDatos(maps[0]);
 
 
 
