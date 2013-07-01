@@ -12,10 +12,14 @@ var layer = new Kinetic.Layer({
 });
 
 //Map Class
-var Map = function(width, height, tiles){
+var Map = function(width, height){
   this.width = width;
   this.height = height;
-  this.tiles = tiles;
+  this.zones = [];
+};
+
+var Zone = function(zone){
+  this.tiles = zone.tiles;
   this.rects = [];
 };
 
@@ -38,21 +42,23 @@ var life = new Kinetic.Rect({
   fill: 'rgb(255, 20, 0)',
 });
 
-var maps = [];
+var map;
 
 //dinamic function to create maps
-var buildMap = function(layer, map){
-  for(var i = 0; i<map.height*map.width; i+=map.width){
-    for(var j = 0; j<map.width; j++){
-      if(map.tiles[i+j]==1){
+var buildZone = function(layer, width, height, zone){
+  zone.rects = [];
+  for(var i = 0; i<height*width; i+=width){
+    for(var j = 0; j<width; j++){
+      if(zone.tiles[i+j]==1){
         var block = new Kinetic.Rect({
           x: blockSize*j,
-          y: i*blockSize/map.width,
+          y: i*blockSize/width,
           width: blockSize,
           height: blockSize,
-          fill: 'rgb(0,60,180)'
+          fill: 'rgb(0,60,180)',
+          visible: false
         });
-        map.rects.push(block);
+        zone.rects.push(block);
         layer.add(block);
       }
     }
@@ -62,12 +68,10 @@ var buildMap = function(layer, map){
 
 
 function loadMap(data){
+  map = data;
   layer.destroyChildren();
-  maps = [];
-  for (var i = data.tiles.length - 1; i >= 0; i--) {
-    var mapInstance = new Map(data.width, data.height, data.tiles[i]);
-    maps.push(mapInstance);
-    buildMap(layer, mapInstance);
+  for (var i = data.zones.length - 1; i >= 0; i--) {
+    buildZone(layer, map.width, map.height, map.zones[i]);
   };
   layer.add(chameleonBoy);
   layer.add(log);
@@ -97,24 +101,30 @@ context.globalCompositeOperation = "lighter";
 
 myKeys = gKeys.keys;
 
-var mapActiveIndex = 0;
+var zoneActiveIndex = 0;
 var isCollision = function(){
-  return maps[mapActiveIndex].tiles[chameleonBoy.i*maps[mapActiveIndex].width+chameleonBoy.j]==1;
+  return map.zones[zoneActiveIndex].tiles[chameleonBoy.i*map.width+chameleonBoy.j]==1;
 };
-var toogleLayer = function(mapIndex){
-  for (var i = maps[mapActiveIndex].rects.length - 1; i >= 0; i--) {
-    maps[mapActiveIndex].rects[i].hide();
+var initZone = function(zoneIndex){
+  var zoneActiveIndex = zoneIndex;
+  for (var i = map.zones[zoneIndex].rects.length - 1; i >= 0; i--) {
+    map.zones[zoneIndex].rects[i].show();
   };
-  for (var i = maps[mapIndex].rects.length - 1; i >= 0; i--) {
-    maps[mapIndex].rects[i].show();
+}
+var toogleLayer = function(zoneIndex){
+  for (var i = map.zones[zoneActiveIndex].rects.length - 1; i >= 0; i--) {
+    map.zones[zoneActiveIndex].rects[i].hide();
   };
-  mapActiveIndex = mapIndex;
+  for (var i = map.zones[zoneIndex].rects.length - 1; i >= 0; i--) {
+    map.zones[zoneIndex].rects[i].show();
+  };
+  zoneActiveIndex = zoneIndex;
   chameleonBoy.vulnerable = isCollision();
 }
 
 gKeys.keyDown(function(keys){
   if(myKeys.SPACE.down){
-    toogleLayer(mapActiveIndex^1);
+    toogleLayer(zoneActiveIndex^1);
   }
 });
 
@@ -132,19 +142,15 @@ var anim = new Kinetic.Animation(function(frame) {
       if(chameleonBoy.j<0 || isCollision()){
         x+=2;
         chameleonBoy.j++;
-      }else{
-        log.setText('row: '+chameleonBoy.i+' col: '+chameleonBoy.j);
       }
     }
   }else if(myKeys.RIGHT.down){
     x +=2;
     if(x/blockSize-1/2>chameleonBoy.j){
       chameleonBoy.j++;
-      if(chameleonBoy.j>=maps[0].width || isCollision()){
+      if(chameleonBoy.j>=map.width || isCollision()){
         x-=2;
         chameleonBoy.j--;
-      }else{
-        log.setText('row: '+chameleonBoy.i+' col: '+chameleonBoy.j);
       }
     }
   }else if(myKeys.UP.down){
@@ -154,19 +160,15 @@ var anim = new Kinetic.Animation(function(frame) {
       if(chameleonBoy.i<0||isCollision()){
         y+=2;
         chameleonBoy.i++;
-      }else{
-        log.setText('row: '+chameleonBoy.i+' col: '+chameleonBoy.j);
       }
     }
   }else if(myKeys.DOWN.down){
     y+=2;
     if(y/blockSize-1/2>chameleonBoy.i){
       chameleonBoy.i++;
-      if(chameleonBoy.i>=maps[0].height||isCollision()){
+      if(chameleonBoy.i>=map.height||isCollision()){
         y-=2;
         chameleonBoy.i--;
-      }else{
-        log.setText('row: '+chameleonBoy.i+' col: '+chameleonBoy.j);
       }
     }
   }
@@ -194,8 +196,7 @@ function loadDatos(mapUrl) {
       var data = xobj.responseText;
       data = JSON.parse(data);
       loadMap(data);
-      mapActiveIndex=0;
-      toogleLayer(1);
+      initZone(0);
       anim.start();
     }
   }
