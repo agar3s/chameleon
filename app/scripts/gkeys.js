@@ -210,7 +210,9 @@
             };
             link.onmousedown = function(event){
               mapping(this.id, true);
-
+              if(this.id=="vkSpace"){
+                kdCallback(keys);
+              }
               return false;
             };
             link.onmouseup = function(event){
